@@ -11,10 +11,13 @@ class AWSDemo {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
-            AWSDemo().createCloudFormationStack(args[0])
+            AWSDemo().createCloudFormationStack2(args[0])
         }
     }
 
+    /**
+     * Function that does not use the standard library functions
+     */
     fun createCloudFormationStack(newStackName: String) {
         val credentialsProvider = ProfileCredentialsProvider()
         val client = AmazonCloudFormationClientBuilder
@@ -23,7 +26,8 @@ class AWSDemo {
                 .withRegion(Regions.US_EAST_1)
                 .build()
 
-        val templateFile = File(javaClass.classLoader.getResource("WordPress.template.json").file)
+        val templatePath = javaClass.classLoader.getResource("WordPress.template.json").file
+        val templateFile = File(templatePath)
         val template = FileUtils.readFileToString(templateFile, Charset.defaultCharset())
 
         val request = CreateStackRequest()
@@ -32,28 +36,67 @@ class AWSDemo {
 
         val response = client.createStack(request)
         System.out.println("StackID: " + response.stackId)
+
+        // Code Shape
+        /*
+        val credentialsProvider = ...
+        val client = ...
+
+        val templateFile = ...
+        val template = ...
+
+        val request = ...
+
+        val response = ...
+        */
     }
 
+    /**
+     * Function rewritten to use standard functions
+     */
     fun createCloudFormationStack2(newStackName: String) {
-        val client = ProfileCredentialsProvider().run {
+        val client = ProfileCredentialsProvider().let { credentials ->
             AmazonCloudFormationClientBuilder
                     .standard()
-                    .withCredentials(this)
-                    .withRegion(Regions.EU_WEST_1)
+                    .withCredentials(credentials)
+                    .withRegion(Regions.US_EAST_1)
                     .build()
         }
 
-        val template = File(javaClass.classLoader.getResource("WordPress.template.json").file).run {
-            FileUtils.readFileToString(this, Charset.defaultCharset())
+        val template = javaClass.classLoader.getResource("WordPress.template.json").file.let { path ->
+            File(path)
+        }.let { templateFile ->
+            FileUtils.readFileToString(templateFile, Charset.defaultCharset())
         }
 
-        CreateStackRequest().apply {
-            stackName = newStackName
-            templateBody = template
-        }.run {
-            client.createStack(this)
-        }.apply {
-            System.out.println("StackID: " + stackId)
+        CreateStackRequest().also { request ->
+            request.stackName = newStackName
+            request.templateBody = template
+        }.let { request ->
+            client.createStack(request)
+        }.also { response ->
+            System.out.println("StackID: " + response.stackId)
         }
+
+        // Code Shape
+        /*
+        val client = ... .let { credentials ->
+            ...
+        }
+
+        val template = ... .let { path ->
+            ...
+        }.let { templateFile ->
+            ...
+        }
+
+        ... .also { request ->
+            ...
+        }.let { request ->
+            ...
+        }.also { response ->
+            ...
+        }
+         */
     }
 }
